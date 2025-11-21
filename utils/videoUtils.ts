@@ -69,15 +69,19 @@ export const extractFrames = async (
 
 /**
  * Generates a set of timestamps to sample from the video duration.
- * e.g., 5 frames evenly distributed.
+ * Starts from 0 to include the first frame.
  */
 export const generateSampleTimestamps = (duration: number, count: number = 5): number[] => {
-    if (duration <= 0) return [];
-    const step = duration / (count + 1);
+    if (duration <= 0 || count <= 0) return [];
+    
+    // Calculate step to distribute frames evenly, ensuring the first frame (0s) is included
+    const step = duration / count;
     const timestamps = [];
-    for (let i = 1; i <= count; i++) {
-        timestamps.push(step * i);
+    
+    for (let i = 0; i < count; i++) {
+        timestamps.push(i * step);
     }
+    
     return timestamps;
 };
 
