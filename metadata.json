@@ -1,0 +1,5 @@
+{
+  "name": "视频逆向工程 AI",
+  "description": "上传视频分析视觉风格，生成 AI 提示词，并解析技术制作细节。",
+  "requestFramePermissions": []
+}
