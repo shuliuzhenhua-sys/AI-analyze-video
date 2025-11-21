@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Video, Sparkles, RefreshCw, PlusCircle, AlertCircle, Play, Settings2 } from 'lucide-react';
 import UploadZone from './components/UploadZone';
 import ResultCard from './components/ResultCard';
+import StoryboardView from './components/StoryboardView';
 import { extractFrames, generateSampleTimestamps } from './utils/videoUtils';
-import { analyzeFrame } from './services/geminiService';
-import { AnalysisResult, AppState } from './types';
+import { analyzeFrame, generateStoryboard } from './services/geminiService';
+import { AnalysisResult, AppState, AnalysisData } from './types';
 
 // Use a unique ID generator
 const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -17,6 +18,10 @@ const App: React.FC = () => {
   const [videoDuration, setVideoDuration] = useState<number>(0);
   const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
   const [frameCount, setFrameCount] = useState<number>(8);
+  
+  // Storyboard states
+  const [storyboard, setStoryboard] = useState<string | null>(null);
+  const [isGeneratingStoryboard, setIsGeneratingStoryboard] = useState(false);
 
   // Cleanup URL on unmount
   useEffect(() => {
@@ -32,6 +37,7 @@ const App: React.FC = () => {
     setFile(selectedFile);
     setVideoUrl(url);
     setResults([]);
+    setStoryboard(null);
     setAppState(AppState.IDLE);
   };
 
@@ -44,6 +50,8 @@ const App: React.FC = () => {
     if (!file) return;
 
     setAppState(AppState.ANALYZING);
+    setStoryboard(null);
+    setIsGeneratingStoryboard(false);
     
     try {
       // 1. Determine Timestamps based on user selection
@@ -67,14 +75,27 @@ const App: React.FC = () => {
         return frame ? { ...item, thumbnail: frame.image } : item;
       }));
 
+      // Maintain a local copy of completed results for storyboard generation
+      const completedResults: AnalysisResult[] = [];
+
       // 4. Analyze each frame sequentially to avoid rate limits
       for (const frame of frames) {
         try {
           const data = await analyzeFrame(frame.image);
           
+          // Store successful result
+          const resultItem: AnalysisResult = { 
+            id: initialResults.find(r => r.timestamp === frame.timestamp)?.id || generateId(),
+            timestamp: frame.timestamp,
+            thumbnail: frame.image,
+            isLoading: false,
+            data 
+          };
+          completedResults.push(resultItem);
+
           setResults(prev => prev.map(item => 
             item.timestamp === frame.timestamp 
-              ? { ...item, isLoading: false, data } 
+              ? resultItem
               : item
           ));
         } catch (err) {
@@ -87,6 +108,19 @@ const App: React.FC = () => {
       }
 
       setAppState(AppState.COMPLETE);
+
+      // 5. Generate Storyboard if we have valid results
+      if (completedResults.length > 0) {
+        setIsGeneratingStoryboard(true);
+        try {
+          const script = await generateStoryboard(completedResults);
+          setStoryboard(script);
+        } catch (e) {
+          console.error("Failed to generate storyboard", e);
+        } finally {
+          setIsGeneratingStoryboard(false);
+        }
+      }
 
     } catch (error) {
       console.error("Analysis sequence failed", error);
@@ -173,7 +207,7 @@ const App: React.FC = () => {
              {/* Features Grid */}
              <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto pt-8">
                 {[
-                    { icon: Sparkles, title: "AI 提示词生成", desc: "获取还原画风的精准 Prompt" },
+                    { icon: Sparkles, title: "AI 提示词生成", desc: "获取还原画风的精准提示词" },
                     { icon: Video, title: "镜头技术拆解", desc: "解析灯光、运镜与特效技术" },
                     { icon: RefreshCw, title: "逐帧深度分析", desc: "精准捕捉每一个关键瞬间" }
                 ].map((f, i) => (
@@ -200,6 +234,7 @@ const App: React.FC = () => {
                             src={videoUrl} 
                             className="w-full h-full object-contain"
                             controls
+                            autoPlay
                             onLoadedMetadata={handleVideoLoadedMetadata}
                             crossOrigin="anonymous"
                         />
@@ -227,11 +262,11 @@ const App: React.FC = () => {
                                     disabled={appState === AppState.ANALYZING}
                                     className="bg-transparent text-sm font-medium text-blue-400 focus:outline-none cursor-pointer"
                                 >
-                                    <option value={4}>4</option>
-                                    <option value={8}>8</option>
-                                    <option value={12}>12</option>
-                                    <option value={16}>16</option>
-                                    <option value={24}>24</option>
+                                    <option value={8}>8 帧</option>
+                                    <option value={12}>12 帧</option>
+                                    <option value={16}>16 帧</option>
+                                    <option value={20}>20 帧</option>
+                                    <option value={24}>24 帧</option>
                                 </select>
                             </div>
 
@@ -277,8 +312,11 @@ const App: React.FC = () => {
                     </h3>
                 </div>
 
+                {/* Storyboard Section */}
+                <StoryboardView content={storyboard} isLoading={isGeneratingStoryboard} />
+
                 <div className="space-y-4 min-h-[200px] pb-20">
-                    {results.length === 0 && (
+                    {results.length === 0 && !isGeneratingStoryboard && (
                         <div className="h-64 flex flex-col items-center justify-center text-slate-500 border-2 border-dashed border-slate-800 rounded-xl bg-slate-900/30">
                             <Play className="w-10 h-10 mb-3 opacity-20" />
                             <p className="text-sm">请开始分析或手动截取画面</p>

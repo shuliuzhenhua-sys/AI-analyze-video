@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AnalysisResult } from '../types';
 import { formatTime } from '../utils/videoUtils';
-import { Copy, Aperture, Palette, Wand2, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { Copy, Aperture, Palette, Wand2, ChevronDown, ChevronUp, Loader2, User } from 'lucide-react';
 
 interface ResultCardProps {
   result: AnalysisResult;
@@ -65,7 +65,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
         <div className="flex-1 ml-4 min-w-0">
             <h4 className="text-sm font-medium text-blue-300 mb-1 flex items-center gap-2">
                 <Wand2 className="w-3 h-3" />
-                AI 提示词 (Prompt)
+                AI 提示词
             </h4>
             <p className="text-slate-300 text-sm truncate">
                 {result.data.aiPrompt}
@@ -87,7 +87,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
                 <div className="flex items-center justify-between mb-2">
                     <h5 className="text-xs font-bold uppercase text-slate-400 flex items-center gap-2">
                         <Wand2 className="w-4 h-4 text-purple-400" />
-                        AI 绘画提示词
+                        AI 绘画提示词 (Scene)
                     </h5>
                     <button 
                         onClick={() => result.data && copyToClipboard(result.data.aiPrompt, 'prompt')}
@@ -102,10 +102,32 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
                 </div>
             </div>
 
+            {/* Character Prompt Section (Conditional) */}
+            {result.data.characterPrompt && (
+                <div>
+                    <div className="flex items-center justify-between mb-2">
+                        <h5 className="text-xs font-bold uppercase text-slate-400 flex items-center gap-2">
+                            <User className="w-4 h-4 text-orange-400" />
+                            人物角色提示词 (Character)
+                        </h5>
+                        <button 
+                            onClick={() => result.data?.characterPrompt && copyToClipboard(result.data.characterPrompt, 'char-prompt')}
+                            className="text-xs flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                            <Copy className="w-3 h-3" />
+                            {copiedSection === 'char-prompt' ? '已复制!' : '复制'}
+                        </button>
+                    </div>
+                    <div className="bg-slate-900/80 p-3 rounded-lg text-sm text-orange-100/90 font-mono border border-orange-900/30">
+                        {result.data.characterPrompt}
+                    </div>
+                </div>
+            )}
+
             {/* Grid for Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
-                {/* Visual Description */}
+                {/* Technical Breakdown */}
                 <div>
                     <h5 className="text-xs font-bold uppercase text-slate-400 mb-2 flex items-center gap-2">
                         <Aperture className="w-4 h-4 text-emerald-400" />

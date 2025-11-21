@@ -10,6 +10,7 @@ export interface AnalysisResult {
 export interface AnalysisData {
   visualDescription: string;
   aiPrompt: string;
+  characterPrompt?: string; // New field for character-specific prompt
   technicalBreakdown: string;
   colorPalette: string[];
 }
