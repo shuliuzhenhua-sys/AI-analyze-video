@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Video, Sparkles, RefreshCw, PlusCircle, AlertCircle, Play } from 'lucide-react';
+import { Video, Sparkles, RefreshCw, PlusCircle, AlertCircle, Play, Settings2 } from 'lucide-react';
 import UploadZone from './components/UploadZone';
 import ResultCard from './components/ResultCard';
 import { extractFrames, generateSampleTimestamps } from './utils/videoUtils';
@@ -16,6 +16,7 @@ const App: React.FC = () => {
   const [results, setResults] = useState<AnalysisResult[]>([]);
   const [videoDuration, setVideoDuration] = useState<number>(0);
   const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
+  const [frameCount, setFrameCount] = useState<number>(8);
 
   // Cleanup URL on unmount
   useEffect(() => {
@@ -45,8 +46,8 @@ const App: React.FC = () => {
     setAppState(AppState.ANALYZING);
     
     try {
-      // 1. Determine Timestamps (sample at least 8 frames)
-      const timestamps = generateSampleTimestamps(videoDuration, 8);
+      // 1. Determine Timestamps based on user selection
+      const timestamps = generateSampleTimestamps(videoDuration, frameCount);
 
       // 2. Create placeholders in UI
       const initialResults: AnalysisResult[] = timestamps.map(t => ({
@@ -205,33 +206,53 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Action Bar */}
-                    <div className="flex items-center justify-between bg-slate-900 p-4 rounded-xl border border-slate-800 mt-4">
+                    <div className="flex flex-col sm:flex-row items-center justify-between bg-slate-900 p-4 rounded-xl border border-slate-800 mt-4 gap-4">
                         <button 
                             onClick={analyzeCurrentFrame}
                             disabled={appState === AppState.ANALYZING}
-                            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors border border-slate-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors border border-slate-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <PlusCircle className="w-4 h-4" />
                             分析当前帧
                         </button>
 
-                        <button 
-                            onClick={startAnalysis}
-                            disabled={appState === AppState.ANALYZING}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors font-semibold shadow-lg shadow-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {appState === AppState.ANALYZING ? (
-                                <>
-                                    <RefreshCw className="w-4 h-4 animate-spin" />
-                                    分析中...
-                                </>
-                            ) : (
-                                <>
-                                    <Sparkles className="w-4 h-4" />
-                                    自动分析关键帧 (8帧)
-                                </>
-                            )}
-                        </button>
+                        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                            {/* Frame Count Selector */}
+                            <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg border border-slate-700/50">
+                                <Settings2 className="w-4 h-4 text-slate-500" />
+                                <span className="text-xs text-slate-400 whitespace-nowrap">帧数</span>
+                                <select 
+                                    value={frameCount}
+                                    onChange={(e) => setFrameCount(Number(e.target.value))}
+                                    disabled={appState === AppState.ANALYZING}
+                                    className="bg-transparent text-sm font-medium text-blue-400 focus:outline-none cursor-pointer"
+                                >
+                                    <option value={4}>4</option>
+                                    <option value={8}>8</option>
+                                    <option value={12}>12</option>
+                                    <option value={16}>16</option>
+                                    <option value={24}>24</option>
+                                </select>
+                            </div>
+
+                            <button 
+                                onClick={startAnalysis}
+                                disabled={appState === AppState.ANALYZING}
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors font-semibold shadow-lg shadow-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                            >
+                                {appState === AppState.ANALYZING ? (
+                                    <>
+                                        <RefreshCw className="w-4 h-4 animate-spin" />
+                                        分析中...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="w-4 h-4" />
+                                        开始分析
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                     
                     {file && (
